@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>mDNS Manager</title>
+  <title>mDNS</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,20 +40,6 @@
         <h1 class="app-title">mDNS</h1>
       </div>
     </div>
-    <div class="app-bar-trailing">
-      <div class="info-chip">
-        <span class="material-symbols-outlined">computer</span>
-        <strong id="stat-hostname">—</strong>
-      </div>
-      <div class="info-chip">
-        <span class="material-symbols-outlined">link</span>
-        <strong id="stat-ip">—</strong>
-      </div>
-      <div class="info-chip">
-        <span class="material-symbols-outlined">schedule</span>
-        <strong id="stat-uptime">—</strong>
-      </div>
-    </div>
   </header>
 
   <main class="content">
@@ -63,7 +49,7 @@
         <h2 class="card-headline" style="justify-content:space-between;">
           <span style="display:flex;align-items:center;gap:0.55rem;">
             <span class="material-symbols-outlined">dns</span>
-            mDNS Records
+            Records
           </span>
           <span style="display:flex;align-items:center;gap:0.6rem;">
             <span id="record-count" class="count-chip">0 Total</span>
@@ -92,10 +78,6 @@
         <span style="display:flex;align-items:center;gap:0.55rem;">
           <span class="material-symbols-outlined">terminal</span>
           Live mDNS &amp; API Traffic
-        </span>
-        <span class="streaming-badge">
-          <span class="streaming-dot"></span>
-          Streaming
         </span>
       </h2>
       <div class="log-table-wrapper">

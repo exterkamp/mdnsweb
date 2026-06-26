@@ -45,10 +45,6 @@ async function loadRecords() {
     const changed = newJson !== lastRecordsJson;
     lastRecordsJson = newJson;
     currentRecords = data.records;
-    serverIp = data.serverIp;
-
-    document.getElementById('stat-ip').textContent = data.serverIp;
-    document.getElementById('stat-hostname').textContent = data.serverName;
 
     if (changed && editingId === null) renderRecords();
   } catch {
@@ -56,20 +52,11 @@ async function loadRecords() {
   }
 }
 
-function formatUptime(s) {
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return [d && `${d}d`, h && `${h}h`, `${m}m`].filter(Boolean).join(' ');
-}
-
 async function loadStatus() {
   try {
     const res = await fetch('/api/status');
     if (!res.ok) return;
     const data = await res.json();
-    document.getElementById('stat-uptime').textContent = formatUptime(data.uptime);
-
     const newJson = JSON.stringify(data.activityLog);
     if (newJson !== lastLogsJson) {
       lastLogsJson = newJson;
