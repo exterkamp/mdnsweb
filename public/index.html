@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mDNS Manager & Dashboard</title>
+  <link rel="stylesheet" href="index.css">
+  <!-- Lucide Icons for premium visual components -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Header with server info and status -->
+    <header class="fade-in">
+      <div class="brand">
+        <i data-lucide="network" style="width: 32px; height: 32px; color: var(--color-primary);"></i>
+        <div>
+          <h1>mDNS Manager</h1>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.1rem;">Local Hostname Registry</p>
+        </div>
+      </div>
+      
+      <div class="system-stats">
+        <div class="stat-item">
+          <i data-lucide="server" style="width: 16px; height: 16px;"></i>
+          Host: <span id="stat-hostname">-</span>
+        </div>
+        <div class="stat-item">
+          <i data-lucide="link" style="width: 16px; height: 16px;"></i>
+          Server IP: <span id="stat-ip">-</span>
+        </div>
+        <div class="stat-item">
+          <i data-lucide="activity" style="width: 16px; height: 16px;"></i>
+          Uptime: <span id="stat-uptime">-</span>
+        </div>
+        <div class="status-badge" id="mdns-status-badge">
+          <div class="status-dot"></div>
+          <span id="mdns-status-text">mDNS Active</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="dashboard-grid">
+      <!-- Left Column: Add/Register Form -->
+      <section class="card fade-in" style="animation-delay: 0.1s;">
+        <h2 class="card-title">
+          <i data-lucide="plus-circle" style="width: 20px; height: 20px;"></i>
+          Register Local Domain
+        </h2>
+        
+        <form id="add-record-form" onsubmit="handleAddRecord(event)">
+          <div class="form-group">
+            <label for="record-name">Local Hostname</label>
+            <div class="input-wrapper has-suffix">
+              <input type="text" id="record-name" placeholder="stirling-pdf" required autocomplete="off">
+              <span class="input-suffix">.local</span>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.4rem;">
+              The DNS record clients will query (e.g., stirling-pdf.local)
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="record-ip">Target IP Address</label>
+            <div class="input-wrapper">
+              <input type="text" id="record-ip" placeholder="e.g. 192.168.1.232" autocomplete="off">
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.4rem;">
+              Leave blank to default to this server's IP
+            </span>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem;">
+            <div class="form-group" style="flex: 1; margin-bottom: 1.25rem;">
+              <label for="record-port">Port</label>
+              <div class="input-wrapper">
+                <input type="number" id="record-port" placeholder="e.g. 8080" min="1" max="65535" autocomplete="off">
+              </div>
+              <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.4rem;">
+                Required for Bonjour advertisement
+              </span>
+            </div>
+            <div class="form-group" style="flex: 1; margin-bottom: 1.25rem;">
+              <label for="record-protocol">Protocol</label>
+              <select id="record-protocol" style="width:100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem 1rem; color: var(--text-primary); font-size: 0.95rem; font-family: var(--font-sans);">
+                <option value="_http._tcp">HTTP</option>
+                <option value="_https._tcp">HTTPS</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="record-description">Description / App Name</label>
+            <textarea id="record-description" placeholder="e.g. Stirling PDF on port 8080" autocomplete="off"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+            <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
+            Register Record
+          </button>
+        </form>
+      </section>
+
+      <!-- Right Column: List of Records -->
+      <section class="card fade-in" style="animation-delay: 0.2s;">
+        <h2 class="card-title" style="justify-content: space-between;">
+          <span style="display: flex; align-items: center; gap: 0.75rem;">
+            <i data-lucide="list" style="width: 20px; height: 20px;"></i>
+            mDNS Records
+          </span>
+          <span style="display: flex; align-items: center; gap: 0.75rem;">
+            <span id="record-count" style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); background: rgba(255,255,255,0.06); padding: 0.2rem 0.6rem; border-radius: 20px;">
+              0 Total
+            </span>
+            <button class="btn btn-secondary" onclick="openScanModal()" style="font-size: 0.8rem; padding: 0.3rem 0.75rem; gap: 0.4rem;">
+              <i data-lucide="container" style="width: 14px; height: 14px;"></i>
+              Scan Docker
+            </button>
+          </span>
+        </h2>
+
+        <div class="records-list" id="records-list-container">
+          <!-- Populated dynamically -->
+          <div class="empty-state">
+            <i data-lucide="inbox" style="width: 48px; height: 48px;"></i>
+            <p>No records registered yet. Add one in the left panel!</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Bottom: Live logs -->
+    <section class="card logs-card fade-in" style="animation-delay: 0.3s;">
+      <h2 class="card-title logs-header">
+        <span style="display: flex; align-items: center; gap: 0.75rem;">
+          <i data-lucide="terminal" style="width: 20px; height: 20px;"></i>
+          Live mDNS Queries & API Traffic
+        </span>
+        <div class="logs-header-actions">
+          <span style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 0.2rem 0.5rem; border-radius: 4px; display: flex; align-items: center; gap: 0.3rem;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--color-success); animation: pulse 1s infinite;"></span>
+            Streaming
+          </span>
+        </div>
+      </h2>
+
+      <div class="log-table-wrapper">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th style="width: 15%;">Timestamp</th>
+              <th style="width: 12%;">Type</th>
+              <th style="width: 35%;">Action</th>
+              <th style="width: 38%;">Details</th>
+            </tr>
+          </thead>
+          <tbody id="logs-container">
+            <!-- Populated dynamically -->
+            <tr>
+              <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                No traffic logged yet. Trigger mDNS requests or API calls.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="fade-in" style="animation-delay: 0.4s;">
+      <p>mDNS Manager &bull; Designed to run in Docker</p>
+    </footer>
+  </div>
+
+  <!-- Docker Scan Modal -->
+  <div id="scan-modal-backdrop" onclick="if(event.target===this)closeScanModal()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:500; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-surface-solid); border:1px solid var(--border-color); border-radius:16px; padding:1.75rem; width:min(680px,95vw); max-height:80vh; display:flex; flex-direction:column; box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
+        <h2 style="font-size:1.15rem; font-weight:600; display:flex; align-items:center; gap:0.6rem;">
+          <i data-lucide="container" style="width:18px; height:18px; color:var(--color-primary);"></i>
+          Docker Container Scan
+        </h2>
+        <button class="btn btn-secondary btn-icon" onclick="closeScanModal()">
+          <i data-lucide="x" style="width:16px; height:16px;"></i>
+        </button>
+      </div>
+
+      <div id="scan-modal-body" style="overflow-y:auto; flex:1; min-height:80px;">
+        <p style="color:var(--text-muted); text-align:center; padding:2rem;">Scanning...</p>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid var(--border-color);">
+        <label style="font-size:0.85rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+          <input type="checkbox" id="scan-select-all" onchange="toggleSelectAll(this.checked)"> Select all
+        </label>
+        <div style="display:flex; gap:0.75rem;">
+          <button class="btn btn-secondary" onclick="closeScanModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="importSelected()">
+            <i data-lucide="plus" style="width:16px; height:16px;"></i>
+            Import Selected
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Script for UI logic -->
+  <script>
+    let currentRecords = [];
+    let serverIp = '127.0.0.1';
+    let editingId = null;
+
+    // Toast helper
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      
+      const iconName = type === 'success' ? 'check-circle' : 'alert-circle';
+      const iconColor = type === 'success' ? 'var(--color-success)' : 'var(--color-danger)';
+      
+      toast.innerHTML = `
+        <i data-lucide="${iconName}" style="width: 18px; height: 18px; color: ${iconColor};"></i>
+        <span>${message}</span>
+      `;
+      
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      // Remove after 3 seconds
+      setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 280);
+      }, 3000);
+    }
+
+    // Build the full URL for a record
+    function buildUrl(record) {
+      if (!record.port) return `http://${record.name}`;
+      const proto = record.serviceType === '_https._tcp' ? 'https' : 'http';
+      const defaultPort = proto === 'https' ? 443 : 80;
+      return record.port === defaultPort ? `${proto}://${record.name}` : `${proto}://${record.name}:${record.port}`;
+    }
+
+    // Helper: copy to clipboard
+    function copyToClipboard(text, displayName) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(`Copied ${displayName} to clipboard!`);
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+    }
+
+    // Load registered mDNS records
+    async function loadRecords() {
+      try {
+        const response = await fetch('/api/records');
+        if (!response.ok) throw new Error('Failed to load records');
+        
+        const data = await response.json();
+        currentRecords = data.records;
+        serverIp = data.serverIp;
+        
+        // Update header stats
+        document.getElementById('stat-ip').textContent = serverIp;
+        document.getElementById('stat-hostname').textContent = data.serverName;
+        
+        const statusBadge = document.getElementById('mdns-status-badge');
+        const statusText = document.getElementById('mdns-status-text');
+        
+        if (data.status === 'online') {
+          statusBadge.className = 'status-badge';
+          statusText.textContent = 'mDNS Active';
+        } else {
+          statusBadge.className = 'status-badge offline';
+          statusText.textContent = 'mDNS Offline';
+        }
+
+        renderRecords();
+      } catch (err) {
+        console.error(err);
+        showToast('Error loading records from server', 'error');
+      }
+    }
+
+    // Format uptime helper
+    function formatUptime(seconds) {
+      const d = Math.floor(seconds / (3600*24));
+      const h = Math.floor(seconds % (3600*24) / 3600);
+      const m = Math.floor(seconds % 3600 / 60);
+      
+      const parts = [];
+      if (d > 0) parts.push(`${d}d`);
+      if (h > 0) parts.push(`${h}h`);
+      parts.push(`${m}m`);
+      return parts.join(' ');
+    }
+
+    // Load server logs and detailed stats
+    async function loadStatus() {
+      try {
+        const response = await fetch('/api/status');
+        if (!response.ok) throw new Error('Failed to load status');
+        
+        const data = await response.json();
+        
+        // Update uptime
+        document.getElementById('stat-uptime').textContent = formatUptime(data.uptime);
+        
+        // Update activity logs
+        renderLogs(data.activityLog);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Add new record
+    async function handleAddRecord(e) {
+      e.preventDefault();
+
+      const nameInput = document.getElementById('record-name');
+      const ipInput = document.getElementById('record-ip');
+      const portInput = document.getElementById('record-port');
+      const protocolInput = document.getElementById('record-protocol');
+      const descInput = document.getElementById('record-description');
+
+      const name = nameInput.value.trim();
+      const ip = ipInput.value.trim() || serverIp;
+      const port = portInput.value.trim() || null;
+      const serviceType = protocolInput.value;
+      const description = descInput.value.trim();
+
+      try {
+        const response = await fetch('/api/records', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, ip, description, port, serviceType })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to add record');
+        }
+
+        showToast(`Registered ${result.name} successfully!`);
+
+        // Clear form
+        nameInput.value = '';
+        ipInput.value = '';
+        portInput.value = '';
+        descInput.value = '';
+
+        // Reload data
+        loadRecords();
+        loadStatus();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Delete a record
+    async function deleteRecord(id, name) {
+      if (!confirm(`Are you sure you want to delete the record for ${name}?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/records/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to delete record');
+        }
+
+        showToast(`Deleted record for ${name}`);
+        loadRecords();
+        loadStatus();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Toggle active state
+    async function toggleRecord(id, enabled) {
+      try {
+        const response = await fetch(`/api/records/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled })
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to toggle record state');
+        }
+
+        const updated = await response.json();
+        showToast(`${updated.name} is now ${updated.enabled ? 'Enabled' : 'Disabled'}`);
+        loadRecords();
+        loadStatus();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Enter inline editing state
+    function startEditing(id) {
+      editingId = id;
+      renderRecords();
+    }
+
+    // Cancel editing state
+    function cancelEditing() {
+      editingId = null;
+      renderRecords();
+    }
+
+    // Save inline edit
+    async function saveEdit(id) {
+      const editName = document.getElementById(`edit-name-${id}`).value.trim();
+      const editIp = document.getElementById(`edit-ip-${id}`).value.trim();
+      const editPort = document.getElementById(`edit-port-${id}`).value.trim() || null;
+      const editProtocol = document.getElementById(`edit-protocol-${id}`).value;
+      const editDesc = document.getElementById(`edit-desc-${id}`).value.trim();
+
+      try {
+        const response = await fetch(`/api/records/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: editName, ip: editIp, description: editDesc, port: editPort, serviceType: editProtocol })
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to save edits');
+        }
+
+        showToast(`Updated record details`);
+        editingId = null;
+        loadRecords();
+        loadStatus();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Render records to UI
+    function renderRecords() {
+      const container = document.getElementById('records-list-container');
+      const countBadge = document.getElementById('record-count');
+      
+      countBadge.textContent = `${currentRecords.length} Total`;
+
+      if (currentRecords.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i data-lucide="inbox" style="width: 48px; height: 48px;"></i>
+            <p>No records registered yet. Add one in the left panel!</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = currentRecords.map(record => {
+        // If this record is currently being edited
+        if (editingId === record.id) {
+          const currentProtocol = record.serviceType || '_http._tcp';
+          return `
+            <div class="record-item" style="border-color: var(--color-primary);">
+              <div class="edit-card-form">
+                <div class="form-group">
+                  <label>Hostname</label>
+                  <div class="input-wrapper">
+                    <input type="text" id="edit-name-${record.id}" value="${record.name}" required>
+                  </div>
+                </div>
+                <div class="form-group" style="margin-top: 0.5rem;">
+                  <label>Target IP</label>
+                  <input type="text" id="edit-ip-${record.id}" value="${record.ip}" required>
+                </div>
+                <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+                  <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label>Port</label>
+                    <input type="number" id="edit-port-${record.id}" value="${record.port || ''}" placeholder="e.g. 8080" min="1" max="65535">
+                  </div>
+                  <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label>Protocol</label>
+                    <select id="edit-protocol-${record.id}" style="width:100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.65rem 1rem; color: var(--text-primary); font-size: 0.95rem; font-family: var(--font-sans);">
+                      <option value="_http._tcp" ${currentProtocol === '_http._tcp' ? 'selected' : ''}>HTTP</option>
+                      <option value="_https._tcp" ${currentProtocol === '_https._tcp' ? 'selected' : ''}>HTTPS</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group" style="margin-top: 0.5rem;">
+                  <label>Description</label>
+                  <input type="text" id="edit-desc-${record.id}" value="${record.description || ''}">
+                </div>
+                <div class="edit-card-actions">
+                  <button class="btn btn-secondary btn-icon" onclick="cancelEditing()" title="Cancel">
+                    <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                  </button>
+                  <button class="btn btn-primary" onclick="saveEdit('${record.id}')">
+                    <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        // Standard record render
+        const displayDesc = record.description || 'No description provided';
+        const recordUrl = buildUrl(record);
+        const bonjourBadge = record.port
+          ? `<span class="record-ip" style="color: var(--color-success); border-color: rgba(16,185,129,0.2);" title="Bonjour advertised">
+               <i data-lucide="radio" style="width:11px;height:11px;display:inline;vertical-align:middle;margin-right:2px;"></i>${record.serviceType === '_https._tcp' ? 'https' : 'http'}:${record.port}
+             </span>`
+          : '';
+        return `
+          <div class="record-item ${record.enabled ? '' : 'disabled-opacity'}" style="${record.enabled ? '' : 'opacity: 0.6;'}">
+            <div class="record-info">
+              <div class="record-domain-row">
+                <a href="${recordUrl}" target="_blank" class="record-domain" title="Open in new tab">${record.name}</a>
+                <span class="record-ip">${record.ip}</span>
+                ${bonjourBadge}
+              </div>
+              <p class="record-desc">${displayDesc}</p>
+            </div>
+
+            <div class="record-actions">
+              <label class="switch" title="${record.enabled ? 'Disable mDNS responses' : 'Enable mDNS responses'}">
+                <input type="checkbox" ${record.enabled ? 'checked' : ''} onchange="toggleRecord('${record.id}', this.checked)">
+                <span class="slider"></span>
+              </label>
+
+              <button class="btn btn-secondary btn-icon" onclick="copyToClipboard('${recordUrl}', '${record.name}')" title="Copy URL">
+                <i data-lucide="copy" style="width: 15px; height: 15px;"></i>
+              </button>
+
+              <button class="btn btn-secondary btn-icon" onclick="startEditing('${record.id}')" title="Edit Record">
+                <i data-lucide="edit-3" style="width: 15px; height: 15px;"></i>
+              </button>
+
+              <button class="btn btn-danger btn-icon" onclick="deleteRecord('${record.id}', '${record.name}')" title="Delete Record">
+                <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    // Render activity logs to table
+    function renderLogs(logs) {
+      const container = document.getElementById('logs-container');
+      
+      if (!logs || logs.length === 0) {
+        container.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+              No traffic logged yet. Trigger mDNS requests or API calls.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      container.innerHTML = logs.map(log => {
+        const time = new Date(log.timestamp).toLocaleTimeString();
+        let rowClass = `log-row-${log.type}`;
+        let badgeClass = `log-badge log-badge-${log.type}`;
+        
+        return `
+          <tr class="${rowClass}">
+            <td class="log-time">${time}</td>
+            <td><span class="${badgeClass}">${log.type}</span></td>
+            <td style="font-weight: 500;">${log.message}</td>
+            <td style="color: var(--text-secondary); font-size: 0.8rem;">${log.details}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Docker scan
+    let scanCandidates = [];
+
+    async function openScanModal() {
+      const backdrop = document.getElementById('scan-modal-backdrop');
+      backdrop.style.display = 'flex';
+      document.getElementById('scan-modal-body').innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:2rem;">Scanning containers...</p>';
+      document.getElementById('scan-select-all').checked = false;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/docker-scan');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Scan failed');
+        scanCandidates = data.candidates;
+        renderScanResults();
+      } catch (err) {
+        document.getElementById('scan-modal-body').innerHTML = `<p style="color:var(--color-danger); text-align:center; padding:2rem;">${err.message}</p>`;
+      }
+    }
+
+    function closeScanModal() {
+      document.getElementById('scan-modal-backdrop').style.display = 'none';
+      scanCandidates = [];
+    }
+
+    function toggleSelectAll(checked) {
+      document.querySelectorAll('.scan-candidate-check').forEach(cb => cb.checked = checked);
+    }
+
+    function renderScanResults() {
+      const body = document.getElementById('scan-modal-body');
+      const existingNames = new Set(currentRecords.map(r => r.name.toLowerCase()));
+
+      if (scanCandidates.length === 0) {
+        body.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:2rem;">No containers with mapped ports found.</p>';
+        return;
+      }
+
+      body.innerHTML = `
+        <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
+          <thead>
+            <tr style="color:var(--text-secondary);">
+              <th style="padding:0.5rem 0.75rem; text-align:left; font-weight:500; border-bottom:1px solid var(--border-color);"></th>
+              <th style="padding:0.5rem 0.75rem; text-align:left; font-weight:500; border-bottom:1px solid var(--border-color);">Hostname</th>
+              <th style="padding:0.5rem 0.75rem; text-align:left; font-weight:500; border-bottom:1px solid var(--border-color);">IP</th>
+              <th style="padding:0.5rem 0.75rem; text-align:left; font-weight:500; border-bottom:1px solid var(--border-color);">Port</th>
+              <th style="padding:0.5rem 0.75rem; text-align:left; font-weight:500; border-bottom:1px solid var(--border-color);">Protocol</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${scanCandidates.map((c, i) => {
+              const exists = existingNames.has(c.name.toLowerCase());
+              return `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04); ${exists ? 'opacity:0.4;' : ''}">
+                  <td style="padding:0.6rem 0.75rem;">
+                    <input type="checkbox" class="scan-candidate-check" data-index="${i}" ${exists ? 'disabled title="Already registered"' : 'checked'}>
+                  </td>
+                  <td style="padding:0.6rem 0.75rem; font-family:var(--font-mono); color:var(--text-primary);">
+                    ${c.name}${exists ? ' <span style="font-size:0.7rem; color:var(--text-muted);">(exists)</span>' : ''}
+                  </td>
+                  <td style="padding:0.6rem 0.75rem; font-family:var(--font-mono); color:var(--text-secondary);">${c.ip}</td>
+                  <td style="padding:0.6rem 0.75rem; font-family:var(--font-mono); color:var(--text-secondary);">${c.port}</td>
+                  <td style="padding:0.6rem 0.75rem;">
+                    <select class="scan-candidate-protocol" data-index="${i}" style="background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:6px; padding:0.25rem 0.5rem; color:var(--text-primary); font-size:0.8rem; font-family:var(--font-sans);" ${exists ? 'disabled' : ''}>
+                      <option value="_http._tcp">HTTP</option>
+                      <option value="_https._tcp">HTTPS</option>
+                    </select>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+      lucide.createIcons();
+    }
+
+    async function importSelected() {
+      const checkboxes = document.querySelectorAll('.scan-candidate-check:checked:not(:disabled)');
+      if (checkboxes.length === 0) {
+        showToast('No containers selected', 'error');
+        return;
+      }
+
+      let success = 0;
+      let failed = 0;
+
+      for (const cb of checkboxes) {
+        const i = parseInt(cb.dataset.index, 10);
+        const candidate = { ...scanCandidates[i] };
+        const protocolEl = document.querySelector(`.scan-candidate-protocol[data-index="${i}"]`);
+        if (protocolEl) candidate.serviceType = protocolEl.value;
+
+        try {
+          const res = await fetch('/api/records', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(candidate),
+          });
+          if (res.ok) { success++; } else { failed++; }
+        } catch { failed++; }
+      }
+
+      closeScanModal();
+      loadRecords();
+      loadStatus();
+
+      if (success > 0) showToast(`Imported ${success} record${success > 1 ? 's' : ''}!`);
+      if (failed > 0) showToast(`${failed} record${failed > 1 ? 's' : ''} failed to import`, 'error');
+    }
+
+    // Initial load
+    loadRecords();
+    loadStatus();
+
+    // Poll server every 3 seconds for updates
+    setInterval(() => {
+      loadRecords();
+      loadStatus();
+    }, 3000);
+  </script>
+</body>
+</html>

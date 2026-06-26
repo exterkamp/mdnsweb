@@ -1,0 +1,13 @@
+{
+  "name": "mdns-manager",
+  "version": "1.0.0",
+  "description": "mDNS Manager and Responder for Docker Webapps",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multicast-dns": "^7.2.5"
+  }
+}

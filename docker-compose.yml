@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  mdns-manager:
+    build: .
+    container_name: mdns-manager
+    restart: always
+    network_mode: host
+    environment:
+      - PORT=8090
+      - NODE_ENV=production
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
