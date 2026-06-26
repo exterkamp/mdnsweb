@@ -408,6 +408,33 @@ app.get('/api/docker-scan', (req, res) => {
   dockerReq.end();
 });
 
+// Always-available endpoint so the client can detect dev mode
+app.get('/api/meta', (req, res) => {
+  res.json({ dev: process.env.NODE_ENV === 'development' });
+});
+
+// Dev-only: SSE endpoint + public file watcher for hot reload
+if (process.env.NODE_ENV === 'development') {
+  const devClients = new Set();
+
+  app.get('/__dev_reload', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    devClients.add(res);
+    req.on('close', () => devClients.delete(res));
+  });
+
+  fs.watch(path.join(__dirname, 'public'), { recursive: true }, (event, filename) => {
+    if (!filename) return;
+    console.log(`[DEV] ${filename} changed — pushing reload`);
+    devClients.forEach(res => res.write('data: reload\n\n'));
+  });
+
+  logActivity('system', 'Dev mode: hot reload active on /__dev_reload');
+}
+
 // Start Web Server
 app.listen(PORT, '0.0.0.0', () => {
   logActivity('system', `Web management dashboard listening on port ${PORT}`);

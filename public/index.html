@@ -13,53 +13,7 @@
     import 'https://esm.run/@material/web/all.js';
     import {styles as typescaleStyles} from 'https://esm.run/@material/web/typography/md-typescale-styles.js';
 
-    // Inject the MD3 dark theme AFTER MWC so our tokens win the cascade
-    const theme = new CSSStyleSheet();
-    theme.replaceSync(`
-      :root {
-        color-scheme: dark;
-        --md-sys-color-primary: #A8C7FA;
-        --md-sys-color-surface-tint: #A8C7FA;
-        --md-sys-color-on-primary: #003063;
-        --md-sys-color-primary-container: #004787;
-        --md-sys-color-on-primary-container: #D6E3FF;
-        --md-sys-color-secondary: #BCC7DC;
-        --md-sys-color-on-secondary: #263141;
-        --md-sys-color-secondary-container: #3C4759;
-        --md-sys-color-on-secondary-container: #D8E3F8;
-        --md-sys-color-tertiary: #7DD5A8;
-        --md-sys-color-on-tertiary: #003824;
-        --md-sys-color-tertiary-container: #005237;
-        --md-sys-color-on-tertiary-container: #99F2C3;
-        --md-sys-color-error: #FFB4AB;
-        --md-sys-color-error-container: #93000A;
-        --md-sys-color-on-error: #690005;
-        --md-sys-color-on-error-container: #FFDAD6;
-        --md-sys-color-background: #111318;
-        --md-sys-color-on-background: #E2E2E9;
-        --md-sys-color-surface: #111318;
-        --md-sys-color-on-surface: #E2E2E9;
-        --md-sys-color-surface-variant: #44474F;
-        --md-sys-color-on-surface-variant: #C4C6D0;
-        --md-sys-color-outline: #8E9099;
-        --md-sys-color-outline-variant: #44474F;
-        --md-sys-color-shadow: #000000;
-        --md-sys-color-scrim: #000000;
-        --md-sys-color-inverse-surface: #E2E2E9;
-        --md-sys-color-inverse-on-surface: #2F3036;
-        --md-sys-color-inverse-primary: #1A5CB4;
-        --md-sys-color-surface-container-lowest: #0C0E13;
-        --md-sys-color-surface-container-low: #191C20;
-        --md-sys-color-surface-container: #1D2024;
-        --md-sys-color-surface-container-high: #282A2F;
-        --md-sys-color-surface-container-highest: #33353A;
-        --md-ref-typeface-plain: 'Google Sans', system-ui, sans-serif;
-        --md-ref-typeface-brand: 'Google Sans', system-ui, sans-serif;
-      }
-    `);
-
     document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
-    document.adoptedStyleSheets.push(theme);
   </script>
   <link rel="stylesheet" href="index.css">
 </head>
@@ -70,7 +24,7 @@
     <div class="app-bar-leading">
       <span class="material-symbols-outlined">dns</span>
       <div>
-        <h1 class="app-title">mDNS Manager</h1>
+        <h1 class="app-title">mDNS</h1>
       </div>
     </div>
     <div class="app-bar-trailing">
@@ -85,10 +39,6 @@
       <div class="info-chip">
         <span class="material-symbols-outlined">schedule</span>
         <strong id="stat-uptime">—</strong>
-      </div>
-      <div id="mdns-status-chip" class="status-chip online">
-        <span class="status-dot"></span>
-        <span id="mdns-status-text">mDNS Active</span>
       </div>
     </div>
   </header>
@@ -153,7 +103,7 @@
     </section>
   </main>
 
-  <footer class="app-footer">mDNS Manager &bull; Docker-hosted mDNS Responder</footer>
+  <footer class="app-footer">Made in California</footer>
 
   <!-- ── Add Record Dialog ── -->
   <md-dialog id="add-record-dialog">
@@ -302,16 +252,6 @@
 
         document.getElementById('stat-ip').textContent = data.serverIp;
         document.getElementById('stat-hostname').textContent = data.serverName;
-
-        const chip = document.getElementById('mdns-status-chip');
-        const txt  = document.getElementById('mdns-status-text');
-        if (data.status === 'online') {
-          chip.className = 'status-chip online';
-          txt.textContent = 'mDNS Active';
-        } else {
-          chip.className = 'status-chip offline';
-          txt.textContent = 'mDNS Offline';
-        }
 
         // Only re-render if data changed and user isn't mid-edit
         if (changed && editingId === null) renderRecords();
@@ -658,6 +598,20 @@
     loadRecords();
     loadStatus();
     setInterval(() => { loadRecords(); loadStatus(); }, 3000);
+  </script>
+
+  <script>
+    // Dev hot reload — connects to SSE endpoint, retries after nodemon restarts
+    fetch('/api/meta').then(r => r.json()).then(({ dev }) => {
+      if (!dev) return;
+      (function connect() {
+        const es = new EventSource('/__dev_reload');
+        let ready = false;
+        es.onopen = () => { if (ready) location.reload(); ready = true; };
+        es.onmessage = () => location.reload();
+        es.onerror = () => { es.close(); setTimeout(connect, 1500); };
+      })();
+    });
   </script>
 </body>
 </html>

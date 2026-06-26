@@ -4,10 +4,14 @@
   "description": "mDNS Manager and Responder for Docker Webapps",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
     "multicast-dns": "^7.2.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }

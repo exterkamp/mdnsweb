@@ -27,6 +27,23 @@ docker compose build --pull=false && docker compose up -d
 
 `--pull=false` skips re-pulling the base image from Docker Hub (avoids network timeouts when the image is already cached locally).
 
+### Development mode (hot reload)
+
+A separate Compose file mounts the source tree as live volumes. Changes to `server.js` trigger an automatic nodemon restart; changes to anything under `public/` (HTML, CSS) push a browser reload via SSE — no rebuild needed.
+
+```bash
+# First-time build
+docker compose -f docker-compose.dev.yml build
+
+# Start dev stack
+docker compose -f docker-compose.dev.yml up -d
+
+# Tail logs (shows nodemon restarts and file-change events)
+docker compose -f docker-compose.dev.yml logs -f
+```
+
+The dashboard at `http://<server-ip>:8090` will automatically refresh whenever you save a file.
+
 ### Bare Node
 
 ```bash
