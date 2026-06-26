@@ -5,6 +5,7 @@ data/*
 .env.*
 *.log
 npm-debug.log*
+.claude/*
 
 .DS_Store
 Thumbs.db

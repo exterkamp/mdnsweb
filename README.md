@@ -19,6 +19,14 @@ docker compose up -d
 
 Requires `network_mode: host` (already set) so the container can send and receive multicast DNS packets on the LAN.
 
+To rebuild the image after code changes and relaunch:
+
+```bash
+docker compose build --pull=false && docker compose up -d
+```
+
+`--pull=false` skips re-pulling the base image from Docker Hub (avoids network timeouts when the image is already cached locally).
+
 ### Bare Node
 
 ```bash
