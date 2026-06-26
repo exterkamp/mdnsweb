@@ -187,7 +187,6 @@ h1 {
   gap: 0.55rem;
   padding-bottom: 1rem;
   margin-bottom: 1.125rem;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
   min-width: 0;
 }
 
