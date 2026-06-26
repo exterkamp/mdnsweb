@@ -1,4 +1,4 @@
-# mDNS Manager
+# mDNS web
 
 A lightweight mDNS responder with a web dashboard for managing `.local` DNS records on your home network. Useful for routing Docker-hosted web apps to friendly hostnames without editing `/etc/hosts` on every device.
 
