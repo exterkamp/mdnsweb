@@ -7,6 +7,8 @@ const http = require('http');
 const PORT = process.env.PORT || 8090;
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'records.json');
+const LOG_FILE = path.join(DATA_DIR, 'activity.log');
+const LOG_MAX_BYTES = 1 * 1024 * 1024; // 1 MB
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
@@ -62,8 +64,44 @@ function saveRecords() {
   }
 }
 
-// Activity logging buffer (shows on the dashboard)
+// Trim activity.log to stay under LOG_MAX_BYTES by dropping oldest lines
+function trimLogFile() {
+  try {
+    const content = fs.readFileSync(LOG_FILE, 'utf8');
+    const lines = content.split('\n').filter(l => l.trim());
+    let i = 0;
+    while (i < lines.length - 1 && Buffer.byteLength(lines.slice(i).join('\n') + '\n') > LOG_MAX_BYTES * 0.8) {
+      i++;
+    }
+    fs.writeFileSync(LOG_FILE, lines.slice(i).join('\n') + '\n');
+  } catch (err) {
+    console.error('Error trimming log file:', err);
+  }
+}
+
+function appendLogToFile(entry) {
+  try {
+    fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + '\n');
+    if (fs.statSync(LOG_FILE).size > LOG_MAX_BYTES) trimLogFile();
+  } catch (err) {
+    console.error('Error writing to log file:', err);
+  }
+}
+
+// Activity logging buffer (last 50 entries for the dashboard)
 const activityLog = [];
+
+// Seed in-memory buffer from existing log file on startup
+if (fs.existsSync(LOG_FILE)) {
+  try {
+    const lines = fs.readFileSync(LOG_FILE, 'utf8').split('\n').filter(l => l.trim());
+    const entries = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    activityLog.push(...entries.slice(-50).reverse());
+  } catch (err) {
+    console.error('Error loading log file:', err);
+  }
+}
+
 function logActivity(type, message, details = '') {
   const logEntry = {
     timestamp: new Date().toISOString(),
@@ -72,9 +110,8 @@ function logActivity(type, message, details = '') {
     details
   };
   activityLog.unshift(logEntry);
-  if (activityLog.length > 50) {
-    activityLog.pop();
-  }
+  if (activityLog.length > 50) activityLog.pop();
+  appendLogToFile(logEntry);
   console.log(`[${logEntry.type.toUpperCase()}] ${message} ${details ? '(' + details + ')' : ''}`);
 }
 

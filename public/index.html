@@ -12,7 +12,54 @@
   <script type="module">
     import 'https://esm.run/@material/web/all.js';
     import {styles as typescaleStyles} from 'https://esm.run/@material/web/typography/md-typescale-styles.js';
+
+    // Inject the MD3 dark theme AFTER MWC so our tokens win the cascade
+    const theme = new CSSStyleSheet();
+    theme.replaceSync(`
+      :root {
+        color-scheme: dark;
+        --md-sys-color-primary: #A8C7FA;
+        --md-sys-color-surface-tint: #A8C7FA;
+        --md-sys-color-on-primary: #003063;
+        --md-sys-color-primary-container: #004787;
+        --md-sys-color-on-primary-container: #D6E3FF;
+        --md-sys-color-secondary: #BCC7DC;
+        --md-sys-color-on-secondary: #263141;
+        --md-sys-color-secondary-container: #3C4759;
+        --md-sys-color-on-secondary-container: #D8E3F8;
+        --md-sys-color-tertiary: #7DD5A8;
+        --md-sys-color-on-tertiary: #003824;
+        --md-sys-color-tertiary-container: #005237;
+        --md-sys-color-on-tertiary-container: #99F2C3;
+        --md-sys-color-error: #FFB4AB;
+        --md-sys-color-error-container: #93000A;
+        --md-sys-color-on-error: #690005;
+        --md-sys-color-on-error-container: #FFDAD6;
+        --md-sys-color-background: #111318;
+        --md-sys-color-on-background: #E2E2E9;
+        --md-sys-color-surface: #111318;
+        --md-sys-color-on-surface: #E2E2E9;
+        --md-sys-color-surface-variant: #44474F;
+        --md-sys-color-on-surface-variant: #C4C6D0;
+        --md-sys-color-outline: #8E9099;
+        --md-sys-color-outline-variant: #44474F;
+        --md-sys-color-shadow: #000000;
+        --md-sys-color-scrim: #000000;
+        --md-sys-color-inverse-surface: #E2E2E9;
+        --md-sys-color-inverse-on-surface: #2F3036;
+        --md-sys-color-inverse-primary: #1A5CB4;
+        --md-sys-color-surface-container-lowest: #0C0E13;
+        --md-sys-color-surface-container-low: #191C20;
+        --md-sys-color-surface-container: #1D2024;
+        --md-sys-color-surface-container-high: #282A2F;
+        --md-sys-color-surface-container-highest: #33353A;
+        --md-ref-typeface-plain: 'Google Sans', system-ui, sans-serif;
+        --md-ref-typeface-brand: 'Google Sans', system-ui, sans-serif;
+      }
+    `);
+
     document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
+    document.adoptedStyleSheets.push(theme);
   </script>
   <link rel="stylesheet" href="index.css">
 </head>
@@ -24,7 +71,6 @@
       <span class="material-symbols-outlined">dns</span>
       <div>
         <h1 class="app-title">mDNS Manager</h1>
-        <p class="app-subtitle">Local Hostname Registry</p>
       </div>
     </div>
     <div class="app-bar-trailing">
@@ -48,76 +94,12 @@
   </header>
 
   <main class="content">
-    <div class="dashboard-grid">
 
-      <!-- ── Register Domain Form ── -->
-      <section class="surface-card">
-        <h2 class="card-headline">
-          <span class="material-symbols-outlined">add_circle</span>
-          Register Domain
-        </h2>
-
-        <form id="add-record-form" onsubmit="handleAddRecord(event)">
-          <div class="form-fields">
-            <md-filled-text-field
-              id="record-name"
-              label="Local Hostname"
-              placeholder="stirling-pdf"
-              suffix-text=".local"
-              autocomplete="off"
-              required
-            ></md-filled-text-field>
-
-            <md-filled-text-field
-              id="record-ip"
-              label="Target IP Address"
-              placeholder="192.168.1.232"
-              autocomplete="off"
-              supporting-text="Leave blank to use this server's IP"
-            ></md-filled-text-field>
-
-            <div class="port-row">
-              <md-filled-text-field
-                id="record-port"
-                label="Port"
-                placeholder="8080"
-                type="number"
-                min="1"
-                max="65535"
-                supporting-text="For Bonjour"
-              ></md-filled-text-field>
-
-              <md-filled-select id="record-protocol" label="Protocol">
-                <md-select-option value="_http._tcp" selected>
-                  <div slot="headline">HTTP</div>
-                </md-select-option>
-                <md-select-option value="_https._tcp">
-                  <div slot="headline">HTTPS</div>
-                </md-select-option>
-              </md-filled-select>
-            </div>
-
-            <md-filled-text-field
-              id="record-description"
-              label="Description"
-              placeholder="e.g. Stirling PDF on port 8080"
-              type="textarea"
-              rows="2"
-            ></md-filled-text-field>
-          </div>
-
-          <md-filled-button type="submit" style="width:100%;">
-            <span class="material-symbols-outlined" slot="icon">add</span>
-            Register Record
-          </md-filled-button>
-        </form>
-      </section>
-
-      <!-- ── Records List ── -->
+      <!-- ── Records ── -->
       <section class="surface-card">
         <h2 class="card-headline" style="justify-content:space-between;">
           <span style="display:flex;align-items:center;gap:0.55rem;">
-            <span class="material-symbols-outlined">list</span>
+            <span class="material-symbols-outlined">dns</span>
             mDNS Records
           </span>
           <span style="display:flex;align-items:center;gap:0.6rem;">
@@ -126,6 +108,10 @@
               <span class="material-symbols-outlined" slot="icon">deployed_code</span>
               Scan Docker
             </md-filled-tonal-button>
+            <md-filled-button onclick="openAddDialog()">
+              <span class="material-symbols-outlined" slot="icon">add</span>
+              New Record
+            </md-filled-button>
           </span>
         </h2>
 
@@ -136,7 +122,6 @@
           </div>
         </div>
       </section>
-    </div>
 
     <!-- ── Activity Log ── -->
     <section class="surface-card">
@@ -170,10 +155,74 @@
 
   <footer class="app-footer">mDNS Manager &bull; Docker-hosted mDNS Responder</footer>
 
+  <!-- ── Add Record Dialog ── -->
+  <md-dialog id="add-record-dialog">
+    <div slot="headline" style="display:flex;align-items:center;gap:0.5rem;">
+      <span class="material-symbols-outlined dialog-icon">add_circle</span>
+      Register Domain
+    </div>
+    <div slot="content" style="padding-top:0.5rem;min-width:min(480px,85vw);">
+      <div class="form-fields">
+        <md-outlined-text-field
+          id="record-name"
+          label="Local Hostname"
+          placeholder="stirling-pdf"
+          suffix-text=".local"
+          autocomplete="off"
+          required
+        ></md-outlined-text-field>
+
+        <md-outlined-text-field
+          id="record-ip"
+          label="Target IP Address"
+          placeholder="192.168.1.232"
+          autocomplete="off"
+          supporting-text="Leave blank to use this server's IP"
+        ></md-outlined-text-field>
+
+        <div class="port-row">
+          <md-outlined-text-field
+            id="record-port"
+            label="Port"
+            placeholder="8080"
+            type="number"
+            min="1"
+            max="65535"
+            supporting-text="For Bonjour"
+          ></md-outlined-text-field>
+
+          <md-outlined-select id="record-protocol" label="Protocol">
+            <md-select-option value="_http._tcp" selected>
+              <div slot="headline">HTTP</div>
+            </md-select-option>
+            <md-select-option value="_https._tcp">
+              <div slot="headline">HTTPS</div>
+            </md-select-option>
+          </md-outlined-select>
+        </div>
+
+        <md-outlined-text-field
+          id="record-description"
+          label="Description"
+          placeholder="e.g. Stirling PDF on port 8080"
+          type="textarea"
+          rows="2"
+        ></md-outlined-text-field>
+      </div>
+    </div>
+    <div slot="actions">
+      <md-text-button onclick="closeAddDialog()">Cancel</md-text-button>
+      <md-filled-button onclick="submitAddRecord()">
+        <span class="material-symbols-outlined" slot="icon">add</span>
+        Register
+      </md-filled-button>
+    </div>
+  </md-dialog>
+
   <!-- ── Docker Scan Dialog ── -->
   <md-dialog id="scan-dialog">
     <div slot="headline" style="display:flex;align-items:center;gap:0.5rem;">
-      <span class="material-symbols-outlined" style="color:var(--md-sys-color-primary);font-size:20px;">deployed_code</span>
+      <span class="material-symbols-outlined dialog-icon">deployed_code</span>
       Docker Container Scan
     </div>
     <div slot="content" style="padding:0;min-width:min(600px,85vw);">
@@ -293,10 +342,16 @@
       } catch {}
     }
 
-    // ── Add record ──────────────────────────────────────────────
-    async function handleAddRecord(e) {
-      e.preventDefault();
+    // ── Add record dialog ───────────────────────────────────────
+    function openAddDialog() {
+      document.getElementById('add-record-dialog').show();
+    }
 
+    function closeAddDialog() {
+      document.getElementById('add-record-dialog').close();
+    }
+
+    async function submitAddRecord() {
       const nameEl     = document.getElementById('record-name');
       const ipEl       = document.getElementById('record-ip');
       const portEl     = document.getElementById('record-port');
@@ -309,6 +364,8 @@
       const serviceType = protocolEl.value;
       const description = descEl.value.trim();
 
+      if (!name) { showToast('Hostname is required', 'error'); return; }
+
       try {
         const res = await fetch('/api/records', {
           method: 'POST',
@@ -318,12 +375,13 @@
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Failed to add record');
 
-        showToast(`Registered ${result.name}`);
+        closeAddDialog();
         nameEl.value = '';
         ipEl.value   = '';
         portEl.value = '';
         descEl.value = '';
 
+        showToast(`Registered ${result.name}`);
         loadRecords();
         loadStatus();
       } catch (err) {
